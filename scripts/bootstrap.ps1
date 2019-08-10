@@ -25,7 +25,7 @@ $withVSPath = $withVSPath -replace "\\$" # Remove potential trailing backslash
 
 function vcpkgHasProperty([Parameter(Mandatory=$true)][AllowNull()]$object, [Parameter(Mandatory=$true)]$propertyName)
 {
-    if ($null -eq $object)
+    if ($object -eq $null)
     {
         return $false
     }
@@ -36,12 +36,12 @@ function vcpkgHasProperty([Parameter(Mandatory=$true)][AllowNull()]$object, [Par
 function getProgramFiles32bit()
 {
     $out = ${env:PROGRAMFILES(X86)}
-    if ($null -eq $out)
+    if ($out -eq $null)
     {
         $out = ${env:PROGRAMFILES}
     }
 
-    if ($null -eq $out)
+    if ($out -eq $null)
     {
         throw "Could not find [Program Files 32-bit]"
     }
@@ -138,7 +138,7 @@ function getVisualStudioInstances()
 function findAnyMSBuildWithCppPlatformToolset([string]$withVSPath)
 {
     $VisualStudioInstances = getVisualStudioInstances
-    if ($null -eq $VisualStudioInstances)
+    if ($VisualStudioInstances -eq $null)
     {
         throw "Could not find Visual Studio. VS2015 or VS2017 (with C++) needs to be installed."
     }
@@ -153,6 +153,8 @@ function findAnyMSBuildWithCppPlatformToolset([string]$withVSPath)
         $version = $split[2]
         $path = $split[3]
 
+        
+
         if ($withVSPath -ne "" -and $withVSPath -ne $path)
         {
             Write-Verbose "Skipping: $instanceCandidate"
@@ -160,13 +162,14 @@ function findAnyMSBuildWithCppPlatformToolset([string]$withVSPath)
         }
 
         $majorVersion = $version.Substring(0,2);
-        if ($majorVersion -eq "16")
+
+       if ($majorVersion -eq "16")
         {
             $VCFolder= "$path\VC\Tools\MSVC\"
             if (Test-Path $VCFolder)
             {
                 Write-Verbose "Picking: $instanceCandidate"
-                return "$path\MSBuild\Current\Bin\MSBuild.exe", "v142"
+                return "$path\MSBuild\Current\Bin\MSBuild.exe", "v141"
             }
         }
 
@@ -192,7 +195,7 @@ function findAnyMSBuildWithCppPlatformToolset([string]$withVSPath)
         }
     }
 
-    throw "Could not find MSBuild version with C++ support. VS2015, VS2017, or VS2019 (with C++) needs to be installed."
+    throw "Could not find MSBuild version with C++ support. VS2015 or VS2017 (with C++) needs to be installed."
 }
 function getWindowsSDK( [Parameter(Mandatory=$False)][switch]$DisableWin10SDK = $False,
                         [Parameter(Mandatory=$False)][switch]$DisableWin81SDK = $False,
@@ -210,7 +213,7 @@ function getWindowsSDK( [Parameter(Mandatory=$False)][switch]$DisableWin10SDK = 
     # Windows 10 SDK
     function CheckWindows10SDK($path)
     {
-        if ($null -eq $path)
+        if ($path -eq $null)
         {
             return
         }
@@ -262,7 +265,7 @@ function getWindowsSDK( [Parameter(Mandatory=$False)][switch]$DisableWin10SDK = 
     # Windows 8.1 SDK
     function CheckWindows81SDK($path)
     {
-        if ($null -eq $path)
+        if ($path -eq $null)
         {
             return
         }
@@ -339,16 +342,10 @@ if ($disableMetrics)
 
 $platform = "x86"
 $vcpkgReleaseDir = "$vcpkgSourcesPath\msbuild.x86.release"
-if($PSVersionTable.PSVersion.Major -le 2)
-{ 
-    $architecture=(Get-WmiObject win32_operatingsystem | Select-Object osarchitecture).osarchitecture
-}
-else
-{
-    $architecture=(Get-CimInstance win32_operatingsystem | Select-Object osarchitecture).osarchitecture
-}
+
 if ($win64)
 {
+    $architecture=(Get-WmiObject win32_operatingsystem | Select-Object osarchitecture).osarchitecture
     if (-not $architecture -like "*64*")
     {
         throw "Cannot build 64-bit on non-64-bit system"
@@ -358,15 +355,6 @@ if ($win64)
     $vcpkgReleaseDir = "$vcpkgSourcesPath\msbuild.x64.release"
 }
 
-if ($architecture -like "*64*")
-{
-    $PreferredToolArchitecture = "x64"
-}
-else
-{
-    $PreferredToolArchitecture = "x86"
-}
-
 $arguments = (
 "`"/p:VCPKG_VERSION=-nohash`"",
 "`"/p:DISABLE_METRICS=$disableMetricsValue`"",
@@ -374,7 +362,7 @@ $arguments = (
 "/p:Platform=$platform",
 "/p:PlatformToolset=$platformToolset",
 "/p:TargetPlatformVersion=$windowsSDK",
-"/p:PreferredToolArchitecture=$PreferredToolArchitecture",
+"/p:PreferredToolArchitecture=x64",
 "/verbosity:minimal",
 "/m",
 "/nologo",
@@ -411,7 +399,7 @@ if ($ec -ne 0)
 }
 Write-Host "`nBuilding vcpkg.exe... done.`n"
 
-Write-Verbose "Placing vcpkg.exe in the correct location"
+Write-Verbose("Placing vcpkg.exe in the correct location")
 
 Copy-Item "$vcpkgReleaseDir\vcpkg.exe" "$vcpkgRootDir\vcpkg.exe"
 Copy-Item "$vcpkgReleaseDir\vcpkgmetricsuploader.exe" "$vcpkgRootDir\scripts\vcpkgmetricsuploader.exe"
